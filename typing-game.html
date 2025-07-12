@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Practice Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .correct-char {
+            background-color: #10b981;
+            color: white;
+        }
+        .incorrect-char {
+            background-color: #ef4444;
+            color: white;
+        }
+        .current-char {
+            background-color: #3b82f6;
+            color: white;
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Typing Practice Game</h1>
+            <p class="text-gray-600">Improve your typing speed and accuracy</p>
+        </header>
+
+        <!-- Game Controls -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex flex-wrap justify-center gap-4 mb-6">
+                <!-- Difficulty Selection -->
+                <div class="flex gap-2">
+                    <button id="easy-btn" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">Easy</button>
+                    <button id="normal-btn" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">Normal</button>
+                    <button id="difficult-btn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">Difficult</button>
+                </div>
+                
+                <!-- Game Controls -->
+                <div class="flex gap-2">
+                    <button id="start-btn" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">Start</button>
+                    <button id="reset-btn" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">Reset</button>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div class="bg-blue-50 p-3 rounded-lg">
+                    <div class="text-2xl font-bold text-blue-600" id="wpm">0</div>
+                    <div class="text-sm text-gray-600">WPM</div>
+                </div>
+                <div class="bg-green-50 p-3 rounded-lg">
+                    <div class="text-2xl font-bold text-green-600" id="accuracy">100%</div>
+                    <div class="text-sm text-gray-600">Accuracy</div>
+                </div>
+                <div class="bg-yellow-50 p-3 rounded-lg">
+                    <div class="text-2xl font-bold text-yellow-600" id="timer">60</div>
+                    <div class="text-sm text-gray-600">Time Left</div>
+                </div>
+                <div class="bg-purple-50 p-3 rounded-lg">
+                    <div class="text-2xl font-bold text-purple-600" id="score">0</div>
+                    <div class="text-sm text-gray-600">Score</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Text Display -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="text-center mb-4">
+                <span class="text-sm text-gray-500">Current Difficulty: </span>
+                <span id="current-difficulty" class="font-semibold text-blue-600">Easy</span>
+            </div>
+            <div id="text-display" class="text-lg leading-relaxed font-mono p-4 bg-gray-50 rounded-lg min-h-32 border-2 border-gray-200 focus-within:border-blue-500">
+                Select a difficulty and click Start to begin!
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <textarea 
+                id="input-area" 
+                placeholder="Start typing here..."
+                class="w-full p-4 text-lg font-mono border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none resize-none"
+                rows="4"
+                disabled
+            ></textarea>
+            <div class="mt-4 text-sm text-gray-600">
+                <p>• Type the text exactly as shown above</p>
+                <p>• Green background = correct, Red background = incorrect</p>
+                <p>• Complete as many words as possible within the time limit</p>
+            </div>
+        </div>
+
+        <!-- Results Modal -->
+        <div id="results-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+                <h2 class="text-2xl font-bold text-center mb-6">Game Complete!</h2>
+                <div class="space-y-4">
+                    <div class="flex justify-between">
+                        <span>Words Per Minute:</span>
+                        <span id="final-wpm" class="font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Accuracy:</span>
+                        <span id="final-accuracy" class="font-bold">0%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Total Score:</span>
+                        <span id="final-score" class="font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Difficulty:</span>
+                        <span id="final-difficulty" class="font-bold">Easy</span>
+                    </div>
+                </div>
+                <button id="close-modal" class="w-full mt-6 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                    Play Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Word lists for different difficulties
+        const wordLists = {
+            easy: [
+                'cat', 'dog', 'run', 'jump', 'play', 'book', 'tree', 'sun', 'moon', 'star',
+                'car', 'bus', 'bike', 'walk', 'talk', 'sing', 'dance', 'laugh', 'smile', 'happy',
+                'home', 'work', 'food', 'water', 'fire', 'air', 'earth', 'love', 'peace', 'friend'
+            ],
+            normal: [
+                'computer', 'keyboard', 'monitor', 'software', 'hardware', 'internet', 'website', 'application',
+                'programming', 'development', 'algorithm', 'database', 'network', 'security', 'technology',
+                'innovation', 'creativity', 'productivity', 'efficiency', 'collaboration', 'communication',
+                'education', 'knowledge', 'experience', 'challenge', 'opportunity', 'solution', 'problem'
+            ],
+            difficult: [
+                'incomprehensible', 'responsibilities', 'characteristics', 'entrepreneurship', 'transformation',
+                'implementation', 'synchronization', 'internationalization', 'telecommunications', 'administration',
+                'psychological', 'philosophical', 'physiological', 'meteorological', 'archaeological',
+                'phenomenological', 'epistemological', 'anthropological', 'technological', 'chronological'
+            ]
+        };
+
+        // Game state
+        let gameState = {
+            isPlaying: false,
+            difficulty: 'easy',
+            currentText: '',
+            currentPosition: 0,
+            startTime: null,
+            timeLeft: 60,
+            timer: null,
+            correctChars: 0,
+            totalChars: 0,
+            wordsCompleted: 0
+        };
+
+        // DOM elements
+        const elements = {
+            easyBtn: document.getElementById('easy-btn'),
+            normalBtn: document.getElementById('normal-btn'),
+            difficultBtn: document.getElementById('difficult-btn'),
+            startBtn: document.getElementById('start-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            textDisplay: document.getElementById('text-display'),
+            inputArea: document.getElementById('input-area'),
+            currentDifficulty: document.getElementById('current-difficulty'),
+            wpm: document.getElementById('wpm'),
+            accuracy: document.getElementById('accuracy'),
+            timer: document.getElementById('timer'),
+            score: document.getElementById('score'),
+            resultsModal: document.getElementById('results-modal'),
+            closeModal: document.getElementById('close-modal'),
+            finalWpm: document.getElementById('final-wpm'),
+            finalAccuracy: document.getElementById('final-accuracy'),
+            finalScore: document.getElementById('final-score'),
+            finalDifficulty: document.getElementById('final-difficulty')
+        };
+
+        // Generate random text from word list
+        function generateText(difficulty, length = 50) {
+            const words = wordLists[difficulty];
+            const text = [];
+            for (let i = 0; i < length; i++) {
+                text.push(words[Math.floor(Math.random() * words.length)]);
+            }
+            return text.join(' ');
+        }
+
+        // Update difficulty buttons
+        function updateDifficultyButtons() {
+            [elements.easyBtn, elements.normalBtn, elements.difficultBtn].forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-offset-2');
+            });
+            
+            const activeBtn = {
+                easy: elements.easyBtn,
+                normal: elements.normalBtn,
+                difficult: elements.difficultBtn
+            }[gameState.difficulty];
+            
+            activeBtn.classList.add('ring-2', 'ring-offset-2');
+            elements.currentDifficulty.textContent = gameState.difficulty.charAt(0).toUpperCase() + gameState.difficulty.slice(1);
+        }
+
+        // Display text with highlighting
+        function displayText() {
+            const text = gameState.currentText;
+            const pos = gameState.currentPosition;
+            const inputValue = elements.inputArea.value;
+            
+            let html = '';
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                let className = '';
+                
+                if (i < inputValue.length) {
+                    if (inputValue[i] === char) {
+                        className = 'correct-char';
+                    } else {
+                        className = 'incorrect-char';
+                    }
+                } else if (i === inputValue.length) {
+                    className = 'current-char';
+                }
+                
+                html += `<span class="${className}">${char === ' ' ? '&nbsp;' : char}</span>`;
+            }
+            
+            elements.textDisplay.innerHTML = html;
+        }
+
+        // Calculate WPM
+        function calculateWPM() {
+            if (!gameState.startTime) return 0;
+            const timeElapsed = (Date.now() - gameState.startTime) / 1000 / 60;
+            const wordsTyped = gameState.correctChars / 5;
+            return Math.round(wordsTyped / timeElapsed) || 0;
+        }
+
+        // Calculate accuracy
+        function calculateAccuracy() {
+            if (gameState.totalChars === 0) return 100;
+            return Math.round((gameState.correctChars / gameState.totalChars) * 100);
+        }
+
+        // Calculate score
+        function calculateScore() {
+            const wpm = calculateWPM();
+            const accuracy = calculateAccuracy();
+            const difficultyMultiplier = { easy: 1, normal: 1.5, difficult: 2 }[gameState.difficulty];
+            return Math.round(wpm * accuracy * difficultyMultiplier / 100);
+        }
+
+        // Update statistics
+        function updateStats() {
+            elements.wpm.textContent = calculateWPM();
+            elements.accuracy.textContent = calculateAccuracy() + '%';
+            elements.score.textContent = calculateScore();
+            elements.timer.textContent = gameState.timeLeft;
+        }
+
+        // Start game timer
+        function startTimer() {
+            gameState.timer = setInterval(() => {
+                gameState.timeLeft--;
+                updateStats();
+                
+                if (gameState.timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // Start game
+        function startGame() {
+            gameState.isPlaying = true;
+            gameState.currentText = generateText(gameState.difficulty);
+            gameState.currentPosition = 0;
+            gameState.startTime = Date.now();
+            gameState.timeLeft = 60;
+            gameState.correctChars = 0;
+            gameState.totalChars = 0;
+            gameState.wordsCompleted = 0;
+            
+            elements.inputArea.disabled = false;
+            elements.inputArea.value = '';
+            elements.inputArea.focus();
+            elements.startBtn.disabled = true;
+            
+            displayText();
+            startTimer();
+            updateStats();
+        }
+
+        // End game
+        function endGame() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.timer);
+            
+            elements.inputArea.disabled = true;
+            elements.startBtn.disabled = false;
+            
+            // Show results modal
+            elements.finalWpm.textContent = calculateWPM();
+            elements.finalAccuracy.textContent = calculateAccuracy() + '%';
+            elements.finalScore.textContent = calculateScore();
+            elements.finalDifficulty.textContent = gameState.difficulty.charAt(0).toUpperCase() + gameState.difficulty.slice(1);
+            elements.resultsModal.classList.remove('hidden');
+            elements.resultsModal.classList.add('flex');
+        }
+
+        // Reset game
+        function resetGame() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.timer);
+            
+            gameState.currentText = '';
+            gameState.currentPosition = 0;
+            gameState.startTime = null;
+            gameState.timeLeft = 60;
+            gameState.correctChars = 0;
+            gameState.totalChars = 0;
+            gameState.wordsCompleted = 0;
+            
+            elements.inputArea.disabled = true;
+            elements.inputArea.value = '';
+            elements.startBtn.disabled = false;
+            elements.textDisplay.textContent = 'Select a difficulty and click Start to begin!';
+            
+            updateStats();
+        }
+
+        // Handle input
+        function handleInput() {
+            if (!gameState.isPlaying) return;
+            
+            const inputValue = elements.inputArea.value;
+            const targetText = gameState.currentText;
+            
+            gameState.totalChars = inputValue.length;
+            gameState.correctChars = 0;
+            
+            for (let i = 0; i < inputValue.length; i++) {
+                if (i < targetText.length && inputValue[i] === targetText[i]) {
+                    gameState.correctChars++;
+                }
+            }
+            
+            // Check if text is completed
+            if (inputValue === targetText) {
+                gameState.currentText = generateText(gameState.difficulty);
+                elements.inputArea.value = '';
+                gameState.wordsCompleted++;
+            }
+            
+            displayText();
+            updateStats();
+        }
+
+        // Event listeners
+        elements.easyBtn.addEventListener('click', () => {
+            gameState.difficulty = 'easy';
+            updateDifficultyButtons();
+        });
+
+        elements.normalBtn.addEventListener('click', () => {
+            gameState.difficulty = 'normal';
+            updateDifficultyButtons();
+        });
+
+        elements.difficultBtn.addEventListener('click', () => {
+            gameState.difficulty = 'difficult';
+            updateDifficultyButtons();
+        });
+
+        elements.startBtn.addEventListener('click', startGame);
+        elements.resetBtn.addEventListener('click', resetGame);
+        elements.inputArea.addEventListener('input', handleInput);
+
+        elements.closeModal.addEventListener('click', () => {
+            elements.resultsModal.classList.add('hidden');
+            elements.resultsModal.classList.remove('flex');
+            resetGame();
+        });
+
+        // Prevent paste
+        elements.inputArea.addEventListener('paste', (e) => {
+            e.preventDefault();
+        });
+
+        // Initialize
+        updateDifficultyButtons();
+        updateStats();
+    </script>
+</body>
+</html>
